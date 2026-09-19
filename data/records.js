@@ -1,1 +1,1 @@
-window.RECORDS_SNAPSHOT = [{"id":"test-publish-001","type":"restaurant","name":"测试记录（验证发布流程）","date":"2026-09-19","rating":5,"cost":50,"phone":"","address":"杭州市西湖区","tags":["值得一去"],"photos":[],"notes":"这条是测试数据，验证后会被清掉","province":{"adcode":"330000","name":"浙江省"},"city":{"adcode":"330100","name":"杭州市"},"district":{"adcode":"330106","name":"西湖区"},"createdAt":1,"updatedAt":1}];
+window.RECORDS_SNAPSHOT = [];
