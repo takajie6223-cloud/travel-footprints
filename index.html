@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>全国美食集合网 · 景区 / 酒店 / 餐厅足迹</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='88'>🗺️</text></svg>">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <span class="logo">🗺️</span>
+    <div>
+      <h1>全国美食集合网</h1>
+      <p>景区 · 酒店 · 餐厅 足迹手账</p>
+    </div>
+  </div>
+  <div class="top-stats" id="topStats"></div>
+  <div class="top-actions">
+    <button id="btnExport" class="btn ghost" title="把所有记录导出为 JSON 备份文件">导出备份</button>
+    <button id="btnImport" class="btn ghost" title="从备份文件恢复记录">导入备份</button>
+    <input type="file" id="importFile" accept=".json,application/json" hidden>
+  </div>
+</header>
+
+<nav class="breadcrumb" id="breadcrumb" aria-label="面包屑导航"></nav>
+
+<main class="layout">
+  <section class="panel-main">
+    <div class="map-wrap" id="mapWrap">
+      <div id="map"></div>
+      <div class="map-tip" id="mapTip" hidden></div>
+    </div>
+
+    <div class="county-view" id="countyView" hidden>
+      <div class="county-head">
+        <div class="county-title">
+          <h2 id="countyName"></h2>
+          <p class="muted" id="countyPath"></p>
+        </div>
+        <button class="btn primary" id="btnAdd">＋ 添加记录</button>
+      </div>
+      <div class="mini-map-wrap"><div id="miniMap"></div><span class="mini-hint">点击小地图返回上一级地图</span></div>
+      <div class="tabs" id="countyTabs"></div>
+      <div class="cards" id="cardList"></div>
+    </div>
+  </section>
+
+  <aside class="panel-side">
+    <div class="side-head" id="sideHead"></div>
+    <div class="side-list" id="sideList"></div>
+  </aside>
+</main>
+
+<div class="modal-mask" id="modalMask" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="formTitle">
+    <div class="modal-head">
+      <h2 id="formTitle">添加记录</h2>
+      <button type="button" class="icon-btn" id="formClose" title="关闭">✕</button>
+    </div>
+    <form id="recordForm" novalidate>
+      <div class="seg" id="typeSeg"></div>
+      <label class="field">名称 <span class="req">*</span>
+        <input name="recName" maxlength="60" placeholder="如：西湖 / 亚朵酒店 / 外婆家" required>
+      </label>
+      <div class="row2">
+        <label class="field">到访日期
+          <input type="date" name="recDate">
+        </label>
+        <div class="field">评分
+          <div class="stars" id="starInput"></div>
+        </div>
+      </div>
+      <div class="row2">
+        <label class="field"><span id="costLabel">人均消费</span>（元）
+          <input type="number" name="recCost" min="0" step="0.1" placeholder="选填">
+        </label>
+        <label class="field">电话
+          <input name="recPhone" placeholder="选填">
+        </label>
+      </div>
+      <label class="field">地址
+        <input name="recAddress" placeholder="选填">
+      </label>
+      <div class="field">标签
+        <div class="tags-editor">
+          <div class="chips" id="tagChips"></div>
+          <input id="tagInput" placeholder="输入自定义标签后回车添加">
+        </div>
+      </div>
+      <label class="field">图片链接（每行一个）
+        <textarea name="recPhotos" rows="2" placeholder="https://…"></textarea>
+      </label>
+      <label class="field">推荐理由 / 备注
+        <textarea name="recNotes" rows="3" placeholder="招牌菜、房型体验、游玩建议…"></textarea>
+      </label>
+      <div class="form-foot">
+        <button type="button" class="btn danger" id="btnDelete" hidden>删除记录</button>
+        <span class="spacer"></span>
+        <button type="button" class="btn ghost" id="btnCancel">取消</button>
+        <button type="submit" class="btn primary">保存</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="toast" id="toast" hidden></div>
+
+<script src="lib/echarts.min.js"></script>
+<script src="data/regions.js"></script>
+<script src="data/records.js"></script>
+<script src="js/store.js"></script>
+<script src="js/map.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
