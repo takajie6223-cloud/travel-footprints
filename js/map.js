@@ -4,6 +4,8 @@ const MapView = (() => {
   const DATAV = 'https://geo.datav.aliyun.com/areas_v3/bound/';
   const geoCache = new Map();       // adcode -> Promise<geojson>
   const filePromises = new Map();   // 本地地图文件名 -> Promise
+  let chart = null;
+  let miniChart = null;
   let lastArgs = null;
 
   function mainChart() {
