@@ -2,9 +2,8 @@
    支持下钻放大动画、滚轮缩放、拖拽平移。 */
 const MapView = (() => {
   const DATAV = 'https://geo.datav.aliyun.com/areas_v3/bound/';
-  const geoCache = new Map();
-  let chart = null;
-  let miniChart = null;
+  const geoCache = new Map();       // adcode -> Promise<geojson>
+  const filePromises = new Map();   // 本地地图文件名 -> Promise
   let lastArgs = null;
 
   function mainChart() {
@@ -18,13 +17,46 @@ const MapView = (() => {
     return chart;
   }
 
+  /* 该区划的内置地图文件名（data/geo/ 下，由 tools/build-geo.js 生成） */
+  function localGeoFile(adcode) {
+    if (adcode === '100000') return 'geo-country.js';
+    const meta = REGIONS.nodes[adcode];
+    if (!meta) return null;
+    if (meta.level === 'province') return 'geo-' + adcode + '.js';
+    if (meta.level === 'city' && meta.parent) return 'geo-cities-' + meta.parent + '.js';
+    return null;
+  }
+
+  function loadLocalFile(file) {
+    if (!filePromises.has(file)) {
+      filePromises.set(file, new Promise((resolve, reject) => {
+        const s = document.createElement('script');
+        s.src = 'data/geo/' + file;
+        s.onload = resolve;
+        s.onerror = () => { filePromises.delete(file); reject(new Error('本地地图文件缺失')); };
+        document.head.appendChild(s);
+      }));
+    }
+    return filePromises.get(file);
+  }
+
+  /* 加载顺序：网站内置地图包 → DataV 在线接口（兜底） */
   function loadGeo(adcode) {
     if (!geoCache.has(adcode)) {
-      geoCache.set(adcode,
-        fetch(DATAV + adcode + '_full.json')
-          .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
-          .catch(e => { geoCache.delete(adcode); throw e; })
-      );
+      geoCache.set(adcode, (async () => {
+        const file = localGeoFile(adcode);
+        if (file) {
+          try {
+            await loadLocalFile(file);
+            if (window.__GEO_CACHE__ && window.__GEO_CACHE__[adcode]) {
+              return window.__GEO_CACHE__[adcode];
+            }
+          } catch (e) { /* 本地缺文件时回退在线接口 */ }
+        }
+        const r = await fetch(DATAV + adcode + '_full.json');
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        return r.json();
+      })().catch(e => { geoCache.delete(adcode); throw e; }));
     }
     return geoCache.get(adcode);
   }
