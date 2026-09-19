@@ -82,7 +82,7 @@ const MapView = (() => {
     try {
       geo = await loadGeo(node.adcode);
     } catch (e) {
-      tip('地图数据加载失败，请确认电脑已联网后 <a href="javascript:void(0)" id="retryMap">点此重试</a>');
+      tip('地图数据加载失败，可能是网络波动，<a href="javascript:void(0)" id="retryMap">点此重试</a>');
       return;
     }
     tip('');
@@ -147,7 +147,7 @@ const MapView = (() => {
     try {
       geo = await loadGeo(containerNode.adcode);
     } catch (e) {
-      dom.innerHTML = '<p class="mini-fallback">小地图加载失败（需要联网）</p>';
+      dom.innerHTML = '<p class="mini-fallback">小地图加载失败，点上方面包屑返回</p>';
       return;
     }
     echarts.registerMap('m_' + containerNode.adcode, geo);
