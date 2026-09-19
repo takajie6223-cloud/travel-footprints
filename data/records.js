@@ -1,0 +1,1 @@
+window.RECORDS_SNAPSHOT = [];
