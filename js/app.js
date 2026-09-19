@@ -328,6 +328,18 @@ window.backToCityMap = () => { state.district = null; state.tab = 'all'; renderA
     return;
   }
 
+  /* 应用站点配置（data/config.js，可选文件） */
+  const cfg = window.FT_CONFIG || {};
+  if (cfg.siteName) {
+    document.title = cfg.siteName + (cfg.tagline ? ' · ' + cfg.tagline : '');
+    const h1 = document.querySelector('.brand h1');
+    if (h1) h1.textContent = cfg.siteName;
+    const logo = document.querySelector('.brand .logo');
+    if (logo && cfg.logo) logo.textContent = cfg.logo;
+    const sub = document.querySelector('.brand p');
+    if (sub && cfg.tagline) sub.textContent = cfg.tagline;
+  }
+
   $('btnAdd').onclick = () => openForm();
   $('formClose').onclick = closeModal;
   $('btnCancel').onclick = closeModal;

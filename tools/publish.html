@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>发布助手 · 把备份 JSON 转成 records.js</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='88'>📦</text></svg>">
+<style>
+:root {
+  --bg: #f6f2ea; --panel: #fffdf8; --ink: #3a3128; --muted: #94897a;
+  --line: #e8dfd0; --primary: #cf5b2e; --gold: #e0a458;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; padding: 24px; background: var(--bg); color: var(--ink);
+  font-family: "Microsoft YaHei", "PingFang SC", "Segoe UI", system-ui, sans-serif;
+}
+.wrap { max-width: 760px; margin: 0 auto; }
+h1 { font-size: 20px; margin: 0 0 4px; }
+p.sub { color: var(--muted); font-size: 13px; margin: 0 0 20px; }
+.card {
+  background: var(--panel); border: 1px solid var(--line); border-radius: 12px;
+  padding: 18px 20px; margin-bottom: 16px; box-shadow: 0 2px 12px rgba(90,70,40,.08);
+}
+.card h2 { font-size: 15px; margin: 0 0 10px; }
+.step-no {
+  display: inline-block; width: 22px; height: 22px; line-height: 22px; text-align: center;
+  background: var(--primary); color: #fff; border-radius: 50%; font-size: 13px; margin-right: 8px;
+}
+ol { margin: 8px 0 0; padding-left: 22px; font-size: 14px; line-height: 1.9; }
+code {
+  background: #f1e9da; border-radius: 4px; padding: 1px 6px;
+  font-family: Consolas, "Courier New", monospace; font-size: 13px;
+}
+.drop {
+  border: 2px dashed var(--line); border-radius: 10px; padding: 26px;
+  text-align: center; color: var(--muted); font-size: 14px; cursor: pointer;
+}
+.drop:hover { border-color: var(--gold); color: var(--ink); }
+textarea {
+  width: 100%; min-height: 90px; margin-top: 10px; padding: 10px;
+  border: 1px solid var(--line); border-radius: 8px; font-size: 12px;
+  font-family: Consolas, "Courier New", monospace; color: var(--ink);
+}
+.btn {
+  border: none; border-radius: 8px; padding: 9px 18px; font-size: 14px;
+  cursor: pointer; background: var(--primary); color: #fff; margin: 14px 8px 0 0;
+}
+.btn.ghost { background: transparent; color: var(--primary); border: 1px solid var(--primary); }
+.btn:disabled { opacity: .45; cursor: not-allowed; }
+#result { display: none; }
+.stats { display: flex; gap: 12px; flex-wrap: wrap; margin: 4px 0 12px; }
+.stat {
+  background: #f6efe2; border-radius: 8px; padding: 8px 14px; font-size: 13px;
+}
+.stat b { color: var(--primary); }
+#warnings { margin: 8px 0 0; padding-left: 18px; font-size: 13px; color: #a05a20; }
+#output {
+  width: 100%; height: 180px; padding: 10px; border: 1px solid var(--line);
+  border-radius: 8px; font-size: 11px; font-family: Consolas, "Courier New", monospace;
+  background: #fbf7ef; color: var(--ink);
+}
+.tip { color: var(--muted); font-size: 12px; margin-top: 10px; line-height: 1.8; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>📦 发布助手</h1>
+  <p class="sub">把「导出备份」生成的 JSON 一键转成网站发布用的 <code>data/records.js</code>。本页面双击本地打开即可使用，无需服务器，数据不会上传到任何地方。</p>
+
+  <div class="card">
+    <h2><span class="step-no">1</span>导入备份文件</h2>
+    <label class="drop" id="drop">
+      点击选择「足迹备份_日期.json」，或把 JSON 内容直接粘贴到下面
+      <input type="file" id="file" accept=".json,application/json" hidden>
+    </label>
+    <textarea id="paste" placeholder='或者粘贴 JSON 数组，形如 [{"type":"scenic","name":"…","district":{"adcode":"…","name":"…"}, …]'></textarea>
+    <button class="btn" id="go">生成 records.js</button>
+  </div>
+
+  <div class="card" id="result">
+    <h2><span class="step-no">2</span>检查并带走结果</h2>
+    <div class="stats" id="stats"></div>
+    <ul id="warnings"></ul>
+    <textarea id="output" readonly></textarea>
+    <button class="btn" id="copy">复制内容</button>
+    <button class="btn ghost" id="download">下载 records.js</button>
+    <p class="tip">
+      拿到内容后：用 <b>生成的文件覆盖仓库里的 <code>data/records.js</code></b>，提交推送到 main 分支，
+      GitHub Pages 会自动重新发布（约 1 分钟）。也可以先在本地双击 <code>index.html</code> 预览——
+      注意本地打开的是「录入模式」，页面顶部会显示当前是编辑模式。
+    </p>
+  </div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+let records = null;
+
+$('file').addEventListener('change', e => {
+  const f = e.target.files[0];
+  if (!f) return;
+  const r = new FileReader();
+  r.onload = () => { $('paste').value = String(r.result); convert(); };
+  r.readAsText(f, 'utf-8');
+  e.target.value = '';
+});
+
+$('go').addEventListener('click', convert);
+
+function convert() {
+  const raw = $('paste').value.trim();
+  if (!raw) return;
+  let list;
+  try { list = JSON.parse(raw); }
+  catch (e) { return fail('内容不是有效的 JSON：' + e.message); }
+  if (!Array.isArray(list)) return fail('顶层必须是 JSON 数组（[ … ]）');
+
+  const warn = [];
+  const now = Date.now();
+  const clean = [];
+  list.forEach((it, i) => {
+    if (!it || typeof it !== 'object') { warn.push(`第 ${i + 1} 条不是对象，已跳过`); return; }
+    if (!it.name) { warn.push(`第 ${i + 1} 条缺少 name（名称），已跳过`); return; }
+    if (!it.district || !it.district.adcode) {
+      warn.push(`「${it.name}」缺少 district（区县信息），已跳过——记录必须精确到区县`);
+      return;
+    }
+    const rec = Object.assign({}, it);
+    rec.province = fixRegion(rec.province);
+    rec.city = fixRegion(rec.city);
+    rec.district = fixRegion(rec.district);
+    if (!rec.id) rec.id = uid();
+    if (!rec.createdAt) rec.createdAt = now;
+    rec.updatedAt = now;
+    rec.type = ['scenic', 'hotel', 'restaurant'].includes(rec.type) ? rec.type : 'scenic';
+    clean.push(rec);
+  });
+
+  if (!clean.length) return fail('没有可用的记录（每条至少要有 name 和 district）');
+
+  const provs = new Set(clean.map(r => r.province && r.province.adcode).filter(Boolean));
+  const dists = new Set(clean.map(r => r.district && r.district.adcode).filter(Boolean));
+  const byType = { scenic: 0, hotel: 0, restaurant: 0 };
+  clean.forEach(r => byType[r.type]++);
+
+  $('stats').innerHTML =
+    `<span class="stat">📝 <b>${clean.length}</b> 条记录</span>` +
+    `<span class="stat">📍 <b>${provs.size}</b> 个省级行政区</span>` +
+    `<span class="stat">🏙 <b>${dists.size}</b> 个区县</span>` +
+    `<span class="stat">🏞️ 景区 ${byType.scenic} · 🏨 酒店 ${byType.hotel} · 🍜 餐厅 ${byType.restaurant}</span>`;
+
+  $('warnings').innerHTML = warn.map(w => `<li>${escapeHtml(w)}</li>`).join('');
+
+  window.__RESULT__ = 'window.RECORDS_SNAPSHOT = ' + JSON.stringify(clean) + ';';
+  $('output').value = window.__RESULT__;
+  $('result').style.display = 'block';
+  $('result').scrollIntoView({ behavior: 'smooth' });
+}
+
+function fixRegion(r) {
+  if (!r || !r.adcode) return r || null;
+  return { adcode: String(r.adcode), name: r.name || '' };
+}
+
+function uid() {
+  return (crypto.randomUUID ? crypto.randomUUID()
+    : 'id-' + Date.now() + '-' + Math.random().toString(36).slice(2, 10));
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c =>
+    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+function fail(msg) {
+  $('result').style.display = 'block';
+  $('stats').innerHTML = '';
+  $('warnings').innerHTML = `<li>${escapeHtml(msg)}</li>`;
+  $('output').value = '';
+  window.__RESULT__ = null;
+}
+
+$('copy').addEventListener('click', async () => {
+  if (!window.__RESULT__) return;
+  try { await navigator.clipboard.writeText(window.__RESULT__); }
+  catch (e) { $('output').select(); document.execCommand('copy'); }
+  $('copy').textContent = '已复制 ✓';
+  setTimeout(() => { $('copy').textContent = '复制内容'; }, 1600);
+});
+
+$('download').addEventListener('click', () => {
+  if (!window.__RESULT__) return;
+  const blob = new Blob([window.__RESULT__], { type: 'text/javascript' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'records.js';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 3000);
+});
+</script>
+</body>
+</html>
